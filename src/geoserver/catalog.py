@@ -917,6 +917,37 @@ class Catalog:
         self._cache.pop(style.href, None)
         self._cache.pop(style.body_href, None)
 
+    def add_style_to_layer(self, layer_name, style_name, workspace=None):
+        style = self.get_style(style_name, workspace)
+        if style is None:
+            msg = "The style '{}' to be added does not exist".format(style_name)
+            raise ConflictingDataError(msg)
+        headers = {"Content-type": "text/xml"}
+        xml = "<style><name>{0}</name><filename>{0}.sld" \
+              + "</filename></style>"
+        xml = xml.format(style_name)
+
+        href = self.service_url + "layers/{}/styles".format(layer_name)
+        r = self.session.post(href, data=xml, headers=headers)
+        if r.status_code < 200 or r.status_code > 299:
+            raise UploadError(r.text)
+
+    def set_default_style_for_layer(self, layer_name, style_name, workspace=None):
+        style = self.get_style(style_name, workspace)
+        layer = self.get_layer(layer_name)
+        if style is None or layer is None:
+            msg = "The style '{}' to be set as default style does not exist".format(style_name)
+            raise ConflictingDataError(msg)
+        headers = {"Content-type": "text/xml"}
+        xml = "<layer><defaultStyle><name>{0}</name></defaultStyle></layer>"
+        xml = xml.format(style_name)
+
+        r = self.session.put(layer.href, data=xml, headers=headers)
+        if r.status_code < 200 or r.status_code > 299:
+            raise UploadError(r.text)
+
+        return True
+
     def create_workspace(self, name):
         xml = "<workspace><name>{name}</name></workspace>"\
             .format(name=name)
